@@ -26,23 +26,25 @@ class memeViewController: UIViewController, UIImagePickerControllerDelegate, UIN
     
     //Default text properties
     let memeTextAttributes: [NSAttributedString.Key: Any] = [
-        NSAttributedString.Key.strokeColor: UIColor.black,
-        NSAttributedString.Key.foregroundColor: UIColor.white,
-        NSAttributedString.Key.font: UIFont(name: "HelveticaNeue-CondensedBlack", size: 40)!,
-        NSAttributedString.Key.strokeWidth : -3
+        .strokeColor: UIColor.black,
+        .foregroundColor: UIColor.white,
+        .font: UIFont(name: "HelveticaNeue-CondensedBlack", size: 40)!,
+        .strokeWidth : -3
     ]
     
     //Life cycle
     
+    func setupTextField(_ textField: UITextField, text: String) {
+        textField.defaultTextAttributes = memeTextAttributes
+        textField.text=text
+        textField.textAlignment = NSTextAlignment.center
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         //Setup text components
-        topText.defaultTextAttributes = memeTextAttributes
-        bottomText.defaultTextAttributes = memeTextAttributes
-        topText.text="TOP"
-        topText.textAlignment = NSTextAlignment.center
-        bottomText.text = "BOTTOM"
-        bottomText.textAlignment = NSTextAlignment.center
+        setupTextField(topText, text: "TOP")
+        setupTextField(bottomText, text: "BOTTOM")
         shareButton.isEnabled = false
     }
     
@@ -75,13 +77,15 @@ class memeViewController: UIViewController, UIImagePickerControllerDelegate, UIN
     }
     
     @objc func keyboardWillShow(_ notification:Notification) {
-
-        view.frame.origin.y -= getKeyboardHeight(notification)
+        //move only for bottom text
+        if bottomText.isFirstResponder {
+            view.frame.origin.y = -getKeyboardHeight(notification)
+        }
     }
     
     @objc func keyboardWillHide(_ notification:Notification) {
 
-        view.frame.origin.y += getKeyboardHeight(notification)
+        view.frame.origin.y = +getKeyboardHeight(notification)
     }
 
     func getKeyboardHeight(_ notification:Notification) -> CGFloat {
@@ -123,10 +127,17 @@ class memeViewController: UIViewController, UIImagePickerControllerDelegate, UIN
         dismiss(animated: true, completion: nil)
     }
     
+   func pickAnImage(_ controlType:UIImagePickerController.SourceType) {
+
+        let pickerController = UIImagePickerController()
+        pickerController.delegate = self
+        pickerController.sourceType = controlType
+        present(pickerController, animated: true, completion: nil)
+    }
     
     func save() {
             // save the meme
-        let meme = Meme(topText: topText.text!, bottomText: bottomText.text!, originalImage: imageView.image!, memedImage: generateMemedImage())
+        _ = Meme(topText: topText.text!, bottomText: bottomText.text!, originalImage: imageView.image!, memedImage: generateMemedImage())
     }
     
     
@@ -152,14 +163,11 @@ class memeViewController: UIViewController, UIImagePickerControllerDelegate, UIN
         // pass the ActivityViewController a memedImage as an activity item
         let activity = UIActivityViewController(activityItems: [memedImage], applicationActivities: nil)
         
-//        activity.completionWithItemsHandler = { (activityType: String!, completed: Bool, returnedItems: [AnyObject]!, activityError: NSError!) -> Void in
-//            if completed {
-//                // Save meme and dismiss
-//                self.saveMeme(memedImage)
-//                activity.dismissViewControllerAnimated(true, completion: nil)
-//                self.dismissViewControllerAnimated(true, completion: nil)
-//            }
-//        }
+        activity.completionWithItemsHandler = {(activity, completed, items, error) in
+            if completed {
+                self.save()
+            }
+        }
         
         // present the ActivityViewController
         present(activity, animated: true, completion: nil)
@@ -167,22 +175,12 @@ class memeViewController: UIViewController, UIImagePickerControllerDelegate, UIN
     
     //IBAction to pick up an image from album
     @IBAction func pickAnImageAlbum(_ sender:Any) {
-
-        let pickerController = UIImagePickerController()
-        pickerController.delegate = self
-        pickerController.sourceType = .photoLibrary
-        present(pickerController, animated: true, completion: nil)
-
+        pickAnImage(.photoLibrary)
     }
     
     //IBAction to pick up an image from camera
     @IBAction func pickAnImageCamera(_ sender:Any) {
-
-        let pickerController = UIImagePickerController()
-        pickerController.delegate = self
-        pickerController.sourceType = .camera
-        present(pickerController, animated: true, completion: nil)
-
+        pickAnImage(.camera)
     }
 }
 
